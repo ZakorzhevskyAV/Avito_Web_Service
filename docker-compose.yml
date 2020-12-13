@@ -1,0 +1,40 @@
+services:
+    flask_app:
+        build: .
+        command: "python main_program.py"
+        user: root
+        ports:
+            - '5000:5000'
+        links:
+            - celery_beat 
+            - celery_worker
+            - redis
+        volumes:
+            - ./data:/data
+
+    celery_worker:
+        build: .
+        command: "celery -A json_db_refresh.celery worker --loglevel=debug -E -P solo"
+        user: root
+        links:
+            - celery_beat
+            - redis
+        volumes:
+            - ./data:/data
+
+    celery_beat:
+        build: .
+        command: "celery -A json_db_refresh.celery beat --loglevel=debug --max-interval=3600"
+        user: root
+        links:
+            - redis
+        volumes:
+            - ./data:/data
+
+    redis:
+        image: "redis:4-alpine"
+        user: root
+        ports:
+            - "6379:6379"
+        volumes:
+            - ./data:/data
